@@ -2,12 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>The People You Left Lighter</title>
 <style>
 :root{--ink:#4a2c4a;--pink:#ff8fb1;--peach:#ffc9a3;--cream:#fff6ee;--gold:#f5b942;--lav:#b9a4ff}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;background:#2b1b3a;font-family:ui-rounded,"Trebuchet MS","Segoe UI",system-ui,sans-serif;color:var(--ink);overflow:hidden}
+html,body{margin:0;height:100%;background:#2b1b3a;font-family:ui-rounded,"Trebuchet MS","Segoe UI",system-ui,sans-serif;color:var(--ink);overflow:hidden;overscroll-behavior:none}
 #game{position:relative;width:min(100vw,calc(100vh*2));aspect-ratio:2/1;margin:0 auto;top:50%;transform:translateY(-50%);max-height:100vh}
 canvas{width:100%;height:100%;display:block;background:#ffe5ec;touch-action:none}
 #hud{position:absolute;top:8px;left:12px;right:12px;display:flex;justify-content:space-between;font-weight:700;font-size:clamp(12px,2.2vw,18px);text-shadow:0 1px 0 #fff8}
@@ -18,21 +20,32 @@ canvas{width:100%;height:100%;display:block;background:#ffe5ec;touch-action:none
 #ui{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(80,40,90,.45);padding:12px;z-index:5}
 #ui.on{display:flex;animation:pop .35s both}
 @keyframes pop{from{opacity:0}to{opacity:1}}
-.card{background:var(--cream);border:4px solid #fff;border-radius:24px;box-shadow:0 10px 0 rgba(0,0,0,.15);padding:clamp(14px,3vw,28px);max-width:560px;width:100%;max-height:96%;overflow:auto;text-align:center}
+.card{background:var(--cream);border:4px solid #fff;border-radius:24px;box-shadow:0 10px 0 rgba(0,0,0,.15);padding:clamp(14px,3vw,28px);max-width:560px;width:100%;max-height:96%;overflow:auto;text-align:center;-webkit-overflow-scrolling:touch}
 .card h1{font-size:clamp(22px,4.5vw,38px);margin:0 0 6px;line-height:1.1}
 .card h2{font-size:clamp(18px,3vw,26px);margin:0 0 8px}
 .card p{margin:0 0 12px;line-height:1.5;font-size:clamp(14px,2.2vw,18px)}
-.b{background:var(--pink);color:#fff;border:3px solid #fff;border-radius:999px;padding:10px 24px;font:inherit;font-weight:700;font-size:clamp(14px,2.2vw,18px);box-shadow:0 5px 0 #c45f82;cursor:pointer;margin:4px}
+.b{background:var(--pink);color:#fff;border:3px solid #fff;border-radius:999px;padding:10px 24px;font:inherit;font-weight:700;font-size:clamp(14px,2.2vw,18px);box-shadow:0 5px 0 #c45f82;cursor:pointer;margin:4px;touch-action:manipulation}
 .b:active{transform:translateY(3px);box-shadow:0 2px 0 #c45f82}
 .b:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 .sub{opacity:.75;font-size:.9em}
 #act{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);display:none;z-index:4}
-#toast{position:absolute;top:40px;left:50%;transform:translateX(-50%);background:#fff;border-radius:999px;padding:6px 16px;font-weight:700;font-size:14px;opacity:0;transition:.3s;pointer-events:none}
+#toast{position:absolute;top:40px;left:50%;transform:translateX(-50%);background:#fff;border-radius:999px;padding:6px 16px;font-weight:700;font-size:14px;opacity:0;transition:.3s;pointer-events:none;z-index:6}
 #toast.on{opacity:1}
+#mute{position:absolute;top:34px;right:10px;z-index:6;width:38px;height:38px;border-radius:50%;border:2px solid #fff;background:#ff8fb1cc;color:#fff;font-size:17px;padding:0;cursor:pointer;touch-action:manipulation}
 .letter{background:#fffaf0;border:4px solid #ffd1dc;border-radius:20px;text-align:left;font-family:Georgia,serif;max-height:94%;overflow:auto}
 .letter p{opacity:0;transform:translateY(8px);transition:opacity .9s,transform .9s;font-size:clamp(15px,2.4vw,20px);line-height:1.65;margin:0 0 12px}
 .letter p.on{opacity:1;transform:none}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+html,body{height:100dvh;touch-action:manipulation;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#game{width:min(100vw,calc(100dvh*2));max-height:100dvh}
+#hud{left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right))}
+#mute{right:max(10px,env(safe-area-inset-right))}
+#pad{left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));bottom:max(8px,env(safe-area-inset-bottom))}
+#rot{display:none;position:fixed;inset:0;z-index:50;background:#2b1b3a;color:#fff;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;gap:6px}
+#rot .ic{font-size:64px;animation:turn 2.4s ease-in-out infinite}
+@keyframes turn{0%,30%{transform:rotate(0)}70%,100%{transform:rotate(-90deg)}}
+@media (orientation:portrait) and (max-width:700px){#rot:not(.off){display:flex}}
+@media (max-height:420px){.card{padding:12px}.card h1{font-size:22px}.card p{margin-bottom:8px}.b{padding:7px 18px}#act{bottom:64px}}
 </style>
 </head>
 <body>
@@ -40,10 +53,12 @@ canvas{width:100%;height:100%;display:block;background:#ffe5ec;touch-action:none
 <canvas id="c" width="800" height="400" aria-label="Game"></canvas>
 <div id="hud"><span id="hl"></span><span id="hr"></span></div>
 <div id="toast"></div>
+<button id="mute" aria-label="Sound on/off">🔊</button>
 <button class="b" id="act"></button>
 <div id="pad"><div><button id="bl" aria-label="Left">◀</button><button id="br" aria-label="Right">▶</button></div><div><button id="ba" aria-label="Cheer">♥</button></div></div>
 <div id="ui"><div class="card" id="card"></div></div>
 </div>
+<div id="rot"><div class="ic" aria-hidden="true">📱</div><h2>Turn your phone sideways</h2><p>The game plays best in landscape.</p><button class="b" id="rotb">Play anyway</button></div>
 <script>
 "use strict";
 /* ===== CONFIG ===== */
@@ -63,8 +78,73 @@ const LETTER = [
 "Thank you for the opportunities, the memories, and the person you were while making all of it happen."
 ];
 
+/* ===== SOUND: synthesized music + effects (no files needed) ===== */
+const AU=(()=>{
+  let c=null,mu,sf,on=true,step=0,next=0,tm=0;
+  try{on=localStorage.getItem("amani-mute")!=="1"}catch(e){}
+  const btn=document.getElementById("mute");
+  const F=n=>261.63*Math.pow(2,n/12);
+  function tone(f,t,d,ty,v,o){const a=c.createOscillator(),e=c.createGain();a.type=ty;a.frequency.value=f;
+    e.gain.setValueAtTime(.0001,t);e.gain.exponentialRampToValueAtTime(v,t+.02);e.gain.exponentialRampToValueAtTime(.0001,t+d);
+    a.connect(e);e.connect(o||sf);a.start(t);a.stop(t+d+.05)}
+  const FX={
+    click:[[12,0,.08,"square",.05]],
+    step:[[-14,0,.06,"sine",.12]],
+    cheer:[[12,0],[16,.07],[19,.14],[24,.21,.3]],
+    special:[[12,0],[16,.08],[19,.16],[24,.24],[28,.32],[31,.4],[36,.48,.6]],
+    door:[[0,0,.5,"sine",.2],[7,.12,.5,"sine",.2],[12,.24,.5,"sine",.2],[19,.36,.8,"sine",.2]],
+    alert:[[19,0,.1,"square",.07],[19,.14,.1,"square",.07],[24,.28,.25,"square",.07]],
+    pop:[[24,0,.1,"triangle",.2],[31,.05,.15,"triangle",.15]],
+    page:[[21,0,.14,"sine",.1],[28,.08,.2,"sine",.08]],
+    finale:[[0,0,1.6,"sine",.15],[4,.1,1.6,"sine",.15],[7,.2,1.6,"sine",.15],[12,.3,1.6,"sine",.15],[16,.4,1.8,"sine",.15],[19,.5,2,"sine",.15]]
+  };
+  function sfx(n){
+    if(!c||!on||c.state!=="running")return;
+    let a=FX[n];if(n==="light")a=[[[12,14,16,19,21,24,26][Math.random()*7|0],0,.3,"triangle",.18]];
+    if(!a)return;const t=c.currentTime;
+    for(const x of a)tone(F(x[0]),t+x[1],x[2]||.2,x[3]||"triangle",x[4]||.16)
+  }
+  function tick(){
+    if(!c||c.state!=="running"||!on)return;
+    const m=typeof S==="object"?S.mode:"title",sl=m==="speech"||m==="speechwait"||m==="letter"||m==="end";
+    const sp=60/(sl?72:116)/2;
+    if(next<c.currentTime)next=c.currentTime+.05;
+    while(next<c.currentTime+.25){
+      const b=(step>>3)%4,r=[0,-3,-7,-5][b],i=step%8;
+      if(sl){ if(i%2===0)tone(F(r+[0,4,7,12,7,4,9,7][i]),next,sp*3,"sine",.07,mu) }
+      else{
+        tone(F(r+[0,4,7,12,7,4,9,7][i]),next,sp*1.6,"triangle",.06,mu);
+        if(i%4===0)tone(F(r+12+[0,4,7,4][(step>>2)%4]),next,sp*2.5,"sine",.07,mu);
+        if(i===4)tone(F(r-12),next,sp*2,"sine",.1,mu)
+      }
+      if(i===0)tone(F(r-12),next,sp*5,"sine",.12,mu);
+      step++;next+=sp
+    }
+  }
+  function init(){
+    if(!c){
+      const C=window.AudioContext||window.webkitAudioContext;if(!C)return;
+      try{c=new C()}catch(e){return}
+      mu=c.createGain();mu.gain.value=.55;mu.connect(c.destination);
+      sf=c.createGain();sf.gain.value=.9;sf.connect(c.destination);
+      tm=setInterval(tick,80)
+    }
+    if(c.state!=="running")c.resume&&c.resume()
+  }
+  function paint(){btn.textContent=on?"🔊":"🔇"}
+  btn.onclick=e=>{e.stopPropagation();init();on=!on;try{localStorage.setItem("amani-mute",on?"0":"1")}catch(x){}
+    if(aud&&!on)try{aud.pause()}catch(x){}
+    paint();if(on)sfx("click")};
+  paint();
+  ["pointerdown","touchend","click","keydown"].forEach(ev=>addEventListener(ev,init,{passive:true}));
+  document.addEventListener("visibilitychange",()=>{if(!c)return;if(document.hidden)c.suspend&&c.suspend();else if(on)c.resume&&c.resume()});
+  return{init,sfx,isOn:()=>on}
+})();
+
 /* ===== STATE ===== */
 const cv=document.getElementById("c"),g=cv.getContext("2d"),W=800,H=400,G=330;
+const DPR=Math.min(2,window.devicePixelRatio||1);cv.width=W*DPR;cv.height=H*DPR;
+const TOUCH=matchMedia("(pointer:coarse)").matches;
 const $=id=>document.getElementById(id);
 const LV=[
  {n:"Diplomacy Forum",bg:["#ffe5ec","#ffd6a5"],len:2200,xs:[320,540,760,1000,1250,1480,1720,1950],sp:4,need:4,door:2100,deco:"flags"},
@@ -73,10 +153,11 @@ const LV=[
 let S={lv:0,mode:"title",cheered:0,evDone:false,li:0};
 let A,NP,P,cam,T=0,keys={},cool=0,shout=0,meter=0,held=false,aud=null,speechDone=false;
 try{aud=AUDIO_ASSET?new Audio(AUDIO_ASSET):null}catch(e){aud=null}
+if(aud)aud.preload="auto";
 
 /* ===== UI ===== */
 const ui=$("ui"),card=$("card");
-function show(html,cb){card.className="card";card.innerHTML=html;ui.classList.add("on");const b=card.querySelector("[data-go]");if(b){b.onclick=()=>{ui.classList.remove("on");cb&&cb()};b.focus()}}
+function show(html,cb){card.className="card";card.innerHTML=html;ui.classList.add("on");const b=card.querySelector("[data-go]");if(b){b.onclick=()=>{AU.init();AU.sfx("click");ui.classList.remove("on");cb&&cb()};b.focus()}}
 function toast(t){const e=$("toast");e.textContent=t;e.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("on"),2200)}
 function saveP(){try{localStorage.setItem("amani-save",JSON.stringify({lv:S.lv}))}catch(e){}}
 function loadP(){try{return JSON.parse(localStorage.getItem("amani-save"))}catch(e){return null}}
@@ -94,13 +175,15 @@ function intro(i){
    ["Chapter 1 · The Diplomacy Forum","Amani organized this forum. Some people walked in carrying a small cloud. Walk through the hall and cheer them up. Cheer at least 4 to open the door."],
    ["Chapter 2 · DZ Young Leaders","The team is busy, the energy is higher, and the clouds are back. Same job. Cheer them up."]
   ][i];
-  show(`<h2>${t[0]}</h2><p>${t[1]}</p><p class="sub">← → or A D to walk · Space or ♥ to cheer</p><button class="b" data-go>Go</button>`,()=>startLevel(i));
+  show(`<h2>${t[0]}</h2><p>${t[1]}</p><p class="sub">${TOUCH?"Hold ◀ ▶ to walk · tap ♥ to cheer":"← → or A D to walk · Space or ♥ to cheer"}</p><button class="b" data-go>Go</button>`,()=>startLevel(i));
 }
 function cheer(){
   if(S.mode!=="walk"||cool>0)return;cool=.3;
   for(const n of NP){
     if(!n.on&&Math.abs(n.x-A.x)<90){
       n.on=true;S.cheered++;burst(n.x,G-60,"#ff6f91",10);
+      AU.sfx(n.sp?"special":"cheer");
+      if(S.cheered===LV[S.lv].need)setTimeout(()=>AU.sfx("door"),400);
       if(n.sp){S.mode="card";
         show(S.lv===0?`<h2>A ticket with a name on it</h2><p>You didn't only cheer up this person. You gave him a real chance to show up.</p><p style="font-size:1.4em;font-weight:700;color:#ff6f91">That person is me.</p><button class="b" data-go>Continue</button>`
           :`<h2>Team badge</h2><p>He joined the organizing team. Some of the best memories of his 2026 started here.</p><button class="b" data-go>Continue</button>`,()=>S.mode="walk");
@@ -119,25 +202,25 @@ function finishLevel(){
 function startShout(){
   S.mode="shout";shout=0;
   const b=$("act");b.style.display="block";b.textContent="Answer him: يا شباب!";b.dir="auto";
-  toast("Someone is shouting…");
+  toast("Someone is shouting…");AU.sfx("alert");
 }
 function answerShout(){
-  shout++;playAud();burst(620,200,"#ffd166",8);
-  if(shout>=3){$("act").style.display="none";S.evDone=true;S.mode="card";
+  shout++;AU.sfx("pop");playAud();burst(620,200,"#ffd166",8);
+  if(shout>=3){$("act").style.display="none";S.evDone=true;S.mode="card";AU.sfx("special");
     show(`<h2>NONESSENTIAL?</h2><p dir="auto" style="font-size:1.5em;margin:6px 0">«يا شباب»</p><p>Classification: unscheduled vocal intervention. Cultural significance: impossible to quantify.</p><p class="sub">The committee declines to explain further.</p><button class="b" data-go>Keep walking</button>`,()=>{S.mode="walk"})}
 }
-function playAud(){if(aud){try{aud.currentTime=0;aud.play().catch(()=>{})}catch(e){}}}
+function playAud(){if(aud&&AU.isOn()){try{aud.currentTime=0;const p=aud.play();p&&p.catch&&p.catch(()=>{})}catch(e){}}}
 
 /* ===== SPEECH LEVEL ===== */
 function speech(){
   S.mode="card";meter=0;held=false;
-  show(`<h2>Chapter 3 · The Speech</h2><p>The hall goes quiet. Amani steps up to speak. Every time you press Space or ♥, 5 more people in the room light up.</p><p class="sub">No words are shown here. They belong to the people who were listening.</p><button class="b" data-go>Step up</button>`,()=>{S.mode="speech";saveP()});
+  show(`<h2>Chapter 3 · The Speech</h2><p>The hall goes quiet. Amani steps up to speak. Every time you tap ♥ (or press Space), 5 more people in the room light up.</p><p class="sub">No words are shown here. They belong to the people who were listening.</p><button class="b" data-go>Step up</button>`,()=>{S.mode="speech";saveP()});
 }
 function lightUp(){
   if(S.mode!=="speech")return;
-  meter=Math.min(1,meter+5/24);
+  meter=Math.min(1,meter+5/24);AU.sfx("light");
   for(let i=0;i<14;i++)burst(100+Math.random()*600,G-10,"#ff8fb1",1);
-  if(meter>=.999){S.mode="speechwait";setTimeout(speechEnd,1800)}
+  if(meter>=.999){S.mode="speechwait";AU.sfx("finale");setTimeout(speechEnd,1800)}
 }
 function speechEnd(){
   S.mode="card";
@@ -151,16 +234,16 @@ function letter(){
   card.className="card letter";
   card.innerHTML=LETTER.map(l=>`<p dir="auto">${l.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</p>`).join("")+`<div id="lc" style="text-align:center"></div>`;
   ui.classList.add("on");ui.style.background="rgba(255,200,220,.35)";
-  nextLine();
+  lastL=0;nextLine();
 }
 function nextLine(){
   if(Date.now()-lastL<400)return;lastL=Date.now();
   const ps=card.querySelectorAll("p");
-  if(S.li<ps.length){ps[S.li].classList.add("on");ps[S.li].scrollIntoView({behavior:"smooth",block:"nearest"});S.li++}
+  if(S.li<ps.length){ps[S.li].classList.add("on");AU.sfx("page");ps[S.li].scrollIntoView({behavior:"smooth",block:"nearest"});S.li++}
   const lc=$("lc");
   if(S.li<ps.length){lc.innerHTML='<button class="b" id="nx">Continue</button>';$("nx").onclick=nextLine;$("nx").focus()}
   else{lc.innerHTML=`<p style="letter-spacing:.2em;font-weight:700;margin-top:18px">HAPPY BIRTHDAY, AMANI.</p><p class="sub" style="font-style:italic">Some events end when everyone goes home. Some of their meaning stays with the people who were there.</p><button class="b" id="r1">Read again</button><button class="b" id="r2">Play again</button>`;
-    $("r1").onclick=letter;$("r2").onclick=()=>{ui.style.background="";ui.classList.remove("on");intro(0)};S.mode="end";for(let i=0;i<30;i++)burst(Math.random()*W,H,"#ff8fb1",1)}
+    $("r1").onclick=letter;$("r2").onclick=()=>{ui.style.background="";ui.classList.remove("on");intro(0)};S.mode="end";AU.sfx("finale");for(let i=0;i<30;i++)burst(Math.random()*W,H,"#ff8fb1",1)}
 }
 
 /* ===== PARTICLES ===== */
@@ -179,6 +262,7 @@ addEventListener("keydown",e=>{
   if(k.startsWith("arrow")&&S.mode==="walk")e.preventDefault();
 });
 addEventListener("keyup",e=>{const k=e.key.toLowerCase();keys[k]=0;if(k===" ")held=false});
+addEventListener("blur",()=>{keys={}});
 function bindHold(id,fn,up){const b=$(id);b.addEventListener("pointerdown",e=>{e.preventDefault();fn()});["pointerup","pointerleave","pointercancel"].forEach(ev=>b.addEventListener(ev,up||(()=>{})))}
 bindHold("bl",()=>keys.arrowleft=1,()=>keys.arrowleft=0);
 bindHold("br",()=>keys.arrowright=1,()=>keys.arrowright=0);
@@ -186,6 +270,8 @@ bindHold("ba",()=>{if(S.mode==="walk")cheer();else if(S.mode==="speech")lightUp(
 cv.addEventListener("pointerdown",()=>{lightUp()});
 cv.addEventListener("pointerup",()=>held=false);
 $("act").onclick=answerShout;
+["gesturestart","gesturechange","dblclick"].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault()));
+document.addEventListener("touchmove",e=>{if(!e.target.closest(".card"))e.preventDefault()},{passive:false});
 
 /* ===== UPDATE ===== */
 function update(dt){
@@ -195,11 +281,10 @@ function update(dt){
     const L=LV[S.lv];let v=0;
     if(keys.arrowleft||keys.a)v=-1;if(keys.arrowright||keys.d)v=1;
     A.x=Math.max(40,Math.min(L.len-40,A.x+v*190*dt));A.mv=v;if(v){A.f=v;A.w+=dt*10}
+    if(v&&((A.st=(A.st||0)-dt)<=0)){AU.sfx("step");A.st=.3}
     cam=Math.max(0,Math.min(L.len-W,A.x-W/2));
     if(L.ev&&!S.evDone&&A.x>L.ev){startShout()}
     if(A.x>L.door-30){if(S.cheered>=L.need){finishLevel()}else{A.x=L.door-31;toast("Cheer "+(L.need-S.cheered)+" more to open the door ♥")}}
-  }
-  if(S.mode==="speech"){
   }
 }
 
@@ -249,7 +334,7 @@ function bg(L,c){
   for(let i=0;i<14;i++){g.globalAlpha=.35+.35*Math.sin(T*2+i);g.fillText("✦",(i*97+T*8)%W,70+(i*53)%210)}g.globalAlpha=1;
 }
 function draw(){
-  g.clearRect(0,0,W,H);
+  g.setTransform(DPR,0,0,DPR,0,0);g.clearRect(0,0,W,H);
   if(S.mode==="title"||!A){const L=LV[0];bg(L,T*30);person(400,G,"#ff9ebb",false,{hair:1,star:1});for(let i=0;i<5;i++)heart(120+i*140,200+Math.sin(T*2+i)*12,26,"#ff8fb1");return}
   if(S.mode==="speech"||S.mode==="speechwait"){
     const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,"#3a2552");gr.addColorStop(1,"#7a4a7a");g.fillStyle=gr;g.fillRect(0,0,W,H);
@@ -266,10 +351,8 @@ function draw(){
     $("hl").textContent="";$("hr").textContent="";
   }else{
     const L=LV[S.lv];bg(L,cam);g.save();g.translate(-cam,0);
-    // door
     const open=S.cheered>=L.need;g.fillStyle="#fff";rr(L.door-38,G-122,76,122,30);g.fill();g.fillStyle=open?"#ffd166":"#c9b6d8";rr(L.door-30,G-112,60,112,24);g.fill();if(open){g.fillStyle="#fff9";g.beginPath();g.arc(L.door,G-60,30+Math.sin(T*4)*4,0,7);g.fill()}g.fillStyle="#fff";g.beginPath();g.arc(L.door+16,G-50,3,0,7);g.fill();heart(L.door,G-130,22,open?"#ff6f91":"#b8a9c9");
     for(const n of NP){person(n.x,G,n.on?n.c:"#a9b0c4",!n.on,{tag:n.sp,jump:n.on});if(!n.on)cloud(n.x,G-95);else if(Math.random()<.04)burst(n.x,G-70,"#ff6f91",1);if(n.sp&&!n.on){g.fillStyle="#f5b942";g.font="bold 20px sans-serif";g.textAlign="center";g.fillText("?",n.x,G-125)}}
-    if(L.ev&&S.mode!=="shout"&&!S.evDone){}
     person(A.x,G,"#ff9ebb",false,{hair:1,star:1,still:!A.mv,walking:1});
     for(const n of NP)if(!n.on&&Math.abs(n.x-A.x)<90&&S.mode==="walk"){heart(A.x,G-100,22,"#ff6f91")}
     g.restore();
@@ -286,8 +369,10 @@ function frame(t){const dt=Math.min(.033,(t-last)/1000);last=t;T=t/1000;update(d
 function title(){
   const sv=loadP();
   show(`<h1>The People<br>You Left Lighter</h1><p>A little game, made for Amani.<br>Happy birthday.</p><button class="b" data-go>Play</button>${sv&&sv.lv>0?'<button class="b" id="cn" style="background:#b9a4ff;box-shadow:0 5px 0 #7d68c9">Continue</button>':""}`,()=>intro(0));
-  const c=$("cn");if(c)c.onclick=()=>{ui.classList.remove("on");intro(Math.min(sv.lv,1))};
+  const c=$("cn");if(c)c.onclick=()=>{AU.init();AU.sfx("click");ui.classList.remove("on");intro(Math.min(sv.lv,1))};
 }
+document.addEventListener("contextmenu",e=>{if(e.target.closest("#pad,canvas"))e.preventDefault()});
+$("rotb").onclick=()=>$("rot").classList.add("off");
 P=[];title();requestAnimationFrame(frame);
 </script>
 </body>
