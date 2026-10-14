@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>The People You Left Lighter</title>
+<style>
+:root{--ink:#4a2c4a;--pink:#ff8fb1;--peach:#ffc9a3;--cream:#fff6ee;--gold:#f5b942;--lav:#b9a4ff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#2b1b3a;font-family:ui-rounded,"Trebuchet MS","Segoe UI",system-ui,sans-serif;color:var(--ink);overflow:hidden}
+#game{position:relative;width:min(100vw,calc(100vh*2));aspect-ratio:2/1;margin:0 auto;top:50%;transform:translateY(-50%);max-height:100vh}
+canvas{width:100%;height:100%;display:block;background:#ffe5ec;touch-action:none}
+#hud{position:absolute;top:8px;left:12px;right:12px;display:flex;justify-content:space-between;font-weight:700;font-size:clamp(12px,2.2vw,18px);text-shadow:0 1px 0 #fff8}
+#pad{position:absolute;bottom:8px;left:8px;right:8px;display:flex;justify-content:space-between;pointer-events:none}
+#pad div{display:flex;gap:8px}
+#pad button{pointer-events:auto;width:clamp(44px,9vw,64px);height:clamp(44px,9vw,64px);border-radius:50%;border:3px solid #fff;background:var(--pink);color:#fff;font-size:22px;font-weight:700;box-shadow:0 4px 0 #c45f82;touch-action:none}
+#pad button:active{transform:translateY(3px);box-shadow:0 1px 0 #c45f82}
+#ui{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(80,40,90,.45);padding:12px;z-index:5}
+#ui.on{display:flex;animation:pop .35s both}
+@keyframes pop{from{opacity:0}to{opacity:1}}
+.card{background:var(--cream);border:4px solid #fff;border-radius:24px;box-shadow:0 10px 0 rgba(0,0,0,.15);padding:clamp(14px,3vw,28px);max-width:560px;width:100%;max-height:96%;overflow:auto;text-align:center}
+.card h1{font-size:clamp(22px,4.5vw,38px);margin:0 0 6px;line-height:1.1}
+.card h2{font-size:clamp(18px,3vw,26px);margin:0 0 8px}
+.card p{margin:0 0 12px;line-height:1.5;font-size:clamp(14px,2.2vw,18px)}
+.b{background:var(--pink);color:#fff;border:3px solid #fff;border-radius:999px;padding:10px 24px;font:inherit;font-weight:700;font-size:clamp(14px,2.2vw,18px);box-shadow:0 5px 0 #c45f82;cursor:pointer;margin:4px}
+.b:active{transform:translateY(3px);box-shadow:0 2px 0 #c45f82}
+.b:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.sub{opacity:.75;font-size:.9em}
+#act{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);display:none;z-index:4}
+#toast{position:absolute;top:40px;left:50%;transform:translateX(-50%);background:#fff;border-radius:999px;padding:6px 16px;font-weight:700;font-size:14px;opacity:0;transition:.3s;pointer-events:none}
+#toast.on{opacity:1}
+.letter{background:#fffaf0;border:4px solid #ffd1dc;border-radius:20px;text-align:left;font-family:Georgia,serif;max-height:94%;overflow:auto}
+.letter p{opacity:0;transform:translateY(8px);transition:opacity .9s,transform .9s;font-size:clamp(15px,2.4vw,20px);line-height:1.65;margin:0 0 12px}
+.letter p.on{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="game">
+<canvas id="c" width="800" height="400" aria-label="Game"></canvas>
+<div id="hud"><span id="hl"></span><span id="hr"></span></div>
+<div id="toast"></div>
+<button class="b" id="act"></button>
+<div id="pad"><div><button id="bl" aria-label="Left">◀</button><button id="br" aria-label="Right">▶</button></div><div><button id="ba" aria-label="Cheer">♥</button></div></div>
+<div id="ui"><div class="card" id="card"></div></div>
+</div>
+<script>
+"use strict";
+/* ===== CONFIG ===== */
+// Put the real recording here as a Base64 data URI ("data:audio/mpeg;base64,....") or a file path next to this HTML.
+// While null, the scene uses an on-screen shout bubble only. No audio is invented.
+const AUDIO_ASSET = null;
+// The final letter: one line per item, edit freely.
+const LETTER = [
+"Amani,",
+"I don't think you realize how much of my 2026 has your fingerprints on it.",
+"When I first met you at the Diplomacy Forum, you were the best organizer I had ever seen, and I didn't know how much that moment would end up meaning to me.",
+"You gave me the chance to show up. Maybe for you, it was one part of organizing an event. For me, it became the beginning of something I'll remember.",
+"Then came DZ Young Leaders. I got to be on the organizing team, work alongside you, and collect memories that I honestly consider the best of my 2026.",
+"And somewhere between the chaos, the laughter, that legendary «يا شباب», and your speech, you became part of those memories in a way I can't reduce to a thank-you message.",
+"I held back my tears while listening to you. I don't know if you could tell. But I remember.",
+"Happy birthday, Amani.",
+"Thank you for the opportunities, the memories, and the person you were while making all of it happen."
+];
+
+/* ===== STATE ===== */
+const cv=document.getElementById("c"),g=cv.getContext("2d"),W=800,H=400,G=330;
+const $=id=>document.getElementById(id);
+const LV=[
+ {n:"Diplomacy Forum",bg:["#ffe5ec","#ffd6a5"],len:2200,xs:[320,540,760,1000,1250,1480,1720,1950],sp:4,need:4,door:2100,deco:"flags"},
+ {n:"DZ Young Leaders",bg:["#e3d9ff","#ffc8dd"],len:2400,xs:[300,520,700,1000,1380,1600,1820,2060],sp:2,need:4,door:2300,deco:"lights",ev:1150}
+];
+let S={lv:0,mode:"title",cheered:0,evDone:false,li:0};
+let A,NP,P,cam,T=0,keys={},cool=0,shout=0,meter=0,held=false,aud=null,speechDone=false;
+try{aud=AUDIO_ASSET?new Audio(AUDIO_ASSET):null}catch(e){aud=null}
+
+/* ===== UI ===== */
+const ui=$("ui"),card=$("card");
+function show(html,cb){card.className="card";card.innerHTML=html;ui.classList.add("on");const b=card.querySelector("[data-go]");if(b){b.onclick=()=>{ui.classList.remove("on");cb&&cb()};b.focus()}}
+function toast(t){const e=$("toast");e.textContent=t;e.classList.add("on");clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove("on"),2200)}
+function saveP(){try{localStorage.setItem("amani-save",JSON.stringify({lv:S.lv}))}catch(e){}}
+function loadP(){try{return JSON.parse(localStorage.getItem("amani-save"))}catch(e){return null}}
+
+/* ===== LEVELS ===== */
+function startLevel(i){
+  S.lv=i;S.cheered=0;S.evDone=false;const L=LV[i];
+  A={x:80,f:1,w:0};cam=0;
+  NP=L.xs.map((x,k)=>({x,on:false,t:0,c:["#9ed8ff","#ffd166","#b5e48c","#ffadad","#cdb4ff"][k%5],sp:k===L.sp}));
+  P=[];S.mode="walk";saveP();
+}
+function intro(i){
+  S.mode="card";
+  const t=[
+   ["Chapter 1 · The Diplomacy Forum","Amani organized this forum. Some people walked in carrying a small cloud. Walk through the hall and cheer them up. Cheer at least 4 to open the door."],
+   ["Chapter 2 · DZ Young Leaders","The team is busy, the energy is higher, and the clouds are back. Same job. Cheer them up."]
+  ][i];
+  show(`<h2>${t[0]}</h2><p>${t[1]}</p><p class="sub">← → or A D to walk · Space or ♥ to cheer</p><button class="b" data-go>Go</button>`,()=>startLevel(i));
+}
+function cheer(){
+  if(S.mode!=="walk"||cool>0)return;cool=.3;
+  for(const n of NP){
+    if(!n.on&&Math.abs(n.x-A.x)<90){
+      n.on=true;S.cheered++;burst(n.x,G-60,"#ff6f91",10);
+      if(n.sp){S.mode="card";
+        show(S.lv===0?`<h2>A ticket with a name on it</h2><p>You didn't only cheer up this person. You gave him a real chance to show up.</p><p style="font-size:1.4em;font-weight:700;color:#ff6f91">That person is me.</p><button class="b" data-go>Continue</button>`
+          :`<h2>Team badge</h2><p>He joined the organizing team. Some of the best memories of his 2026 started here.</p><button class="b" data-go>Continue</button>`,()=>S.mode="walk");
+        burst(n.x,G-80,"#f5b942",24);
+      }
+    }
+  }
+}
+function finishLevel(){
+  S.mode="card";
+  if(S.lv===0){show(`<h2>Chapter 1 complete</h2><p>The first thing the archive records: it all began in a room she organized.</p><button class="b" data-go>Next</button>`,()=>intro(1))}
+  else{speech()}
+}
+
+/* ===== يا شباب EVENT ===== */
+function startShout(){
+  S.mode="shout";shout=0;
+  const b=$("act");b.style.display="block";b.textContent="Answer him: يا شباب!";b.dir="auto";
+  toast("Someone is shouting…");
+}
+function answerShout(){
+  shout++;playAud();burst(620,200,"#ffd166",8);
+  if(shout>=3){$("act").style.display="none";S.evDone=true;S.mode="card";
+    show(`<h2>NONESSENTIAL?</h2><p dir="auto" style="font-size:1.5em;margin:6px 0">«يا شباب»</p><p>Classification: unscheduled vocal intervention. Cultural significance: impossible to quantify.</p><p class="sub">The committee declines to explain further.</p><button class="b" data-go>Keep walking</button>`,()=>{S.mode="walk"})}
+}
+function playAud(){if(aud){try{aud.currentTime=0;aud.play().catch(()=>{})}catch(e){}}}
+
+/* ===== SPEECH LEVEL ===== */
+function speech(){
+  S.mode="card";meter=0;held=false;
+  show(`<h2>Chapter 3 · The Speech</h2><p>The hall goes quiet. Amani steps up to speak. Every time you press Space or ♥, 5 more people in the room light up.</p><p class="sub">No words are shown here. They belong to the people who were listening.</p><button class="b" data-go>Step up</button>`,()=>{S.mode="speech";saveP()});
+}
+function lightUp(){
+  if(S.mode!=="speech")return;
+  meter=Math.min(1,meter+5/24);
+  for(let i=0;i<14;i++)burst(100+Math.random()*600,G-10,"#ff8fb1",1);
+  if(meter>=.999){S.mode="speechwait";setTimeout(speechEnd,1800)}
+}
+function speechEnd(){
+  S.mode="card";
+  show(`<h2>One person in that room</h2><p style="font-size:1.3em">"I had to hold back my tears."</p><p>This person is holding back tears. <b style="color:#ff6f91;font-size:1.2em">It's me.</b></p><p class="sub">The game cannot know what she intended. It can only show what it meant to the person listening.</p><button class="b" data-go>Continue</button>`,letter);
+}
+
+/* ===== LETTER ===== */
+let lastL=0;
+function letter(){
+  S.mode="letter";S.li=0;
+  card.className="card letter";
+  card.innerHTML=LETTER.map(l=>`<p dir="auto">${l.replace(/&/g,"&amp;").replace(/</g,"&lt;")}</p>`).join("")+`<div id="lc" style="text-align:center"></div>`;
+  ui.classList.add("on");ui.style.background="rgba(255,200,220,.35)";
+  nextLine();
+}
+function nextLine(){
+  if(Date.now()-lastL<400)return;lastL=Date.now();
+  const ps=card.querySelectorAll("p");
+  if(S.li<ps.length){ps[S.li].classList.add("on");ps[S.li].scrollIntoView({behavior:"smooth",block:"nearest"});S.li++}
+  const lc=$("lc");
+  if(S.li<ps.length){lc.innerHTML='<button class="b" id="nx">Continue</button>';$("nx").onclick=nextLine;$("nx").focus()}
+  else{lc.innerHTML=`<p style="letter-spacing:.2em;font-weight:700;margin-top:18px">HAPPY BIRTHDAY, AMANI.</p><p class="sub" style="font-style:italic">Some events end when everyone goes home. Some of their meaning stays with the people who were there.</p><button class="b" id="r1">Read again</button><button class="b" id="r2">Play again</button>`;
+    $("r1").onclick=letter;$("r2").onclick=()=>{ui.style.background="";ui.classList.remove("on");intro(0)};S.mode="end";for(let i=0;i<30;i++)burst(Math.random()*W,H,"#ff8fb1",1)}
+}
+
+/* ===== PARTICLES ===== */
+function burst(x,y,c,n){P=P||[];for(let i=0;i<n;i++)P.push({x,y,vx:(Math.random()-.5)*160,vy:-60-Math.random()*140,l:1.4,c})}
+
+/* ===== INPUT ===== */
+addEventListener("keydown",e=>{
+  if(/INPUT|TEXTAREA/.test(document.activeElement.tagName))return;
+  const k=e.key.toLowerCase();keys[k]=1;
+  if(k===" "||k==="enter"){
+    if(S.mode==="walk"){e.preventDefault();cheer()}
+    else if(S.mode==="speech"){e.preventDefault();if(!e.repeat)lightUp()}
+    else if(S.mode==="shout"){e.preventDefault();answerShout()}
+    else if(S.mode==="letter"&&document.activeElement===document.body){e.preventDefault();nextLine()}
+  }
+  if(k.startsWith("arrow")&&S.mode==="walk")e.preventDefault();
+});
+addEventListener("keyup",e=>{const k=e.key.toLowerCase();keys[k]=0;if(k===" ")held=false});
+function bindHold(id,fn,up){const b=$(id);b.addEventListener("pointerdown",e=>{e.preventDefault();fn()});["pointerup","pointerleave","pointercancel"].forEach(ev=>b.addEventListener(ev,up||(()=>{})))}
+bindHold("bl",()=>keys.arrowleft=1,()=>keys.arrowleft=0);
+bindHold("br",()=>keys.arrowright=1,()=>keys.arrowright=0);
+bindHold("ba",()=>{if(S.mode==="walk")cheer();else if(S.mode==="speech")lightUp();else if(S.mode==="shout")answerShout()},()=>held=false);
+cv.addEventListener("pointerdown",()=>{lightUp()});
+cv.addEventListener("pointerup",()=>held=false);
+$("act").onclick=answerShout;
+
+/* ===== UPDATE ===== */
+function update(dt){
+  cool=Math.max(0,cool-dt);
+  P=(P||[]).filter(p=>(p.l-=dt)>0);P.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=120*dt});
+  if(S.mode==="walk"){
+    const L=LV[S.lv];let v=0;
+    if(keys.arrowleft||keys.a)v=-1;if(keys.arrowright||keys.d)v=1;
+    A.x=Math.max(40,Math.min(L.len-40,A.x+v*190*dt));A.mv=v;if(v){A.f=v;A.w+=dt*10}
+    cam=Math.max(0,Math.min(L.len-W,A.x-W/2));
+    if(L.ev&&!S.evDone&&A.x>L.ev){startShout()}
+    if(A.x>L.door-30){if(S.cheered>=L.need){finishLevel()}else{A.x=L.door-31;toast("Cheer "+(L.need-S.cheered)+" more to open the door ♥")}}
+  }
+  if(S.mode==="speech"){
+  }
+}
+
+/* ===== DRAW ===== */
+function rr(x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
+function person(x,y,col,sad,o={}){
+  const mv=o.walking&&A?Math.sin(A.w)*5:0;
+  const bob=o.still?0:(sad?0:Math.abs(Math.sin(T*7+x))*5);y-=bob;
+  g.fillStyle="rgba(90,40,90,.18)";g.beginPath();g.ellipse(x,y+bob+2,18,5,0,0,7);g.fill();
+  g.fillStyle="#7a5a7a";rr(x-9,y-8,7,12+mv,3);g.fill();rr(x+2,y-8,7,12-mv,3);g.fill();
+  if(o.hair){g.fillStyle="#4a2c2a";rr(x-18,y-64,36,44,18);g.fill()}
+  g.fillStyle=col;g.beginPath();g.moveTo(x-10,y-36);g.lineTo(x+10,y-36);g.lineTo(x+17,y-5);g.lineTo(x-17,y-5);g.closePath();g.fill();
+  g.strokeStyle=col;g.lineWidth=5;g.lineCap="round";g.beginPath();
+  if(sad){g.moveTo(x-10,y-33);g.lineTo(x-15,y-15);g.moveTo(x+10,y-33);g.lineTo(x+15,y-15)}
+  else{const w=Math.sin(T*8+x)*4;g.moveTo(x-10,y-33);g.lineTo(x-21,y-46-w);g.moveTo(x+10,y-33);g.lineTo(x+21,y-46+w)}
+  g.stroke();
+  g.fillStyle="#ffe0c2";g.beginPath();g.arc(x,y-48,15,0,7);g.fill();
+  if(o.hair){g.fillStyle="#4a2c2a";g.beginPath();g.arc(x,y-52,15,Math.PI,0);g.fill();g.fillStyle="#ff6f91";g.beginPath();g.arc(x+11,y-62,5,0,7);g.arc(x+19,y-60,4,0,7);g.fill()}
+  g.fillStyle="#4a2c4a";g.beginPath();g.arc(x-5,y-48,2.4,0,7);g.arc(x+5,y-48,2.4,0,7);g.fill();
+  g.fillStyle="#fff";g.beginPath();g.arc(x-4.2,y-49,.9,0,7);g.arc(x+5.8,y-49,.9,0,7);g.fill();
+  g.fillStyle="#ff8fb199";g.beginPath();g.arc(x-10,y-43,3.2,0,7);g.arc(x+10,y-43,3.2,0,7);g.fill();
+  g.strokeStyle="#4a2c4a";g.lineWidth=1.6;g.beginPath();if(sad)g.arc(x,y-38,4,Math.PI*1.1,Math.PI*1.9);else g.arc(x,y-44,5,.15,Math.PI-.15);g.stroke();
+  if(sad){g.fillStyle="#7fb3ff";g.beginPath();g.arc(x-6,y-42,1.6,0,7);g.fill()}
+  if(o.tag){g.fillStyle="#f5b942";rr(x-6,y-30,12,10,2);g.fill();g.fillStyle="#fff";g.fillRect(x-1,y-36,2,6)}
+  if(o.star){g.fillStyle="#f5b942";g.font="12px sans-serif";g.textAlign="center";g.fillText("★",x,y-18)}
+}
+function cloud(x,y){
+  g.fillStyle="#9aa5b8";[[-14,0,12],[0,-6,15],[14,0,12]].forEach(c=>{g.beginPath();g.arc(x+c[0],y+c[1],c[2],0,7);g.fill()});
+  g.strokeStyle="#7fb3ff";g.lineWidth=2;for(let i=0;i<3;i++){const d=(T*40+i*9)%22;g.beginPath();g.moveTo(x-10+i*10,y+14+d);g.lineTo(x-10+i*10,y+20+d);g.stroke()}
+}
+function bubble(x,y,t){g.font="bold 20px sans-serif";g.textAlign="center";const w=g.measureText(t).width+24;g.fillStyle="#fff";rr(x-w/2,y-26,w,34,14);g.fill();g.fillStyle="#4a2c4a";g.fillText(t,x,y-3)}
+function heart(x,y,s,c){g.fillStyle=c;g.font=s+"px sans-serif";g.textAlign="center";g.fillText("♥",x,y)}
+
+function bg(L,c){
+  const F=L.deco==="flags";
+  const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,L.bg[0]);gr.addColorStop(1,L.bg[1]);g.fillStyle=gr;g.fillRect(0,0,W,H);
+  g.fillStyle="rgba(255,255,255,.4)";g.beginPath();g.arc(620,90,70+Math.sin(T)*3,0,7);g.fill();g.beginPath();g.arc(620,90,42,0,7);g.fill();
+  g.fillStyle=F?"#ffc4d6":"#cdb8f5";g.beginPath();g.moveTo(0,H);for(let i=0;i<=W;i+=20)g.lineTo(i,255+Math.sin((i+c*.2)/90)*26);g.lineTo(W,H);g.fill();
+  for(let i=-1;i<5;i++){const x=i*260-(c*.5)%260;
+    if(F){g.fillStyle="rgba(255,255,255,.6)";rr(x+40,120,70,160,35);g.fill();g.fillStyle="#ffe9f0";rr(x+50,132,50,140,25);g.fill();g.fillStyle="#fff";g.fillRect(x+30,270,90,12)}
+    else{g.fillStyle="rgba(255,255,255,.5)";g.fillRect(x+30,70,150,6);for(let k=0;k<4;k++){const a=.5+.5*Math.sin(T*2+i+k);g.fillStyle="rgba(255,236,150,"+(.5+a*.4)+")";g.beginPath();g.arc(x+45+k*38,92,9,0,7);g.fill();g.fillStyle="rgba(255,236,150,.12)";g.beginPath();g.moveTo(x+45+k*38,92);g.lineTo(x+20+k*38,G);g.lineTo(x+70+k*38,G);g.fill()}}}
+  g.strokeStyle="#fff";g.lineWidth=2;g.beginPath();g.moveTo(0,30);g.lineTo(W,30);g.stroke();
+  for(let i=-1;i<15;i++){const x=i*60-(c*.9)%60;g.fillStyle=["#ff8fb1","#ffd166","#9ed8ff","#b5e48c"][((i%4)+4)%4];g.beginPath();g.moveTo(x,31);g.lineTo(x+30,31);g.lineTo(x+15,58+Math.sin(T*2+i)*3);g.fill()}
+  g.fillStyle="#fff1e6";g.fillRect(0,G,W,H-G);g.fillStyle=F?"#ffb3c8":"#c9b2ff";g.fillRect(0,G+10,W,26);g.fillStyle="#fff";g.fillRect(0,G+10,W,3);g.fillRect(0,G+33,W,3);
+  g.fillStyle="#ffd1dc";g.fillRect(0,G,W,6);
+  g.fillStyle="#fff";g.font="14px sans-serif";g.textAlign="center";
+  for(let i=0;i<14;i++){g.globalAlpha=.35+.35*Math.sin(T*2+i);g.fillText("✦",(i*97+T*8)%W,70+(i*53)%210)}g.globalAlpha=1;
+}
+function draw(){
+  g.clearRect(0,0,W,H);
+  if(S.mode==="title"||!A){const L=LV[0];bg(L,T*30);person(400,G,"#ff9ebb",false,{hair:1,star:1});for(let i=0;i<5;i++)heart(120+i*140,200+Math.sin(T*2+i)*12,26,"#ff8fb1");return}
+  if(S.mode==="speech"||S.mode==="speechwait"){
+    const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,"#3a2552");gr.addColorStop(1,"#7a4a7a");g.fillStyle=gr;g.fillRect(0,0,W,H);
+    for(let k=0;k<2;k++){const cx=k?W-80:0;g.fillStyle="#b5527a";g.fillRect(cx,0,80,G);g.fillStyle="#9c4266";for(let q=10;q<80;q+=20)g.fillRect(cx+q,0,6,G)}g.fillStyle="rgba(255,230,160,"+(.12+meter*.35)+")";g.beginPath();g.moveTo(400,0);g.lineTo(260,G);g.lineTo(540,G);g.fill();
+    g.fillStyle="#d8a7c0";g.fillRect(0,G,W,H-G);g.fillStyle="#c97fa6";rr(300,G-30,200,30,6);g.fill();
+    person(400,G-30,"#ff9ebb",false,{hair:1,star:1,still:1});
+    const N=24,lit=Math.round(meter*N);
+    for(let r=0;r<3;r++)for(let k=0;k<8;k++){const i=r*8+k,x=100+k*86+(r%2)*20,y=G+14+r*22;person(x,y,i<lit?["#9ed8ff","#ffd166","#b5e48c","#ffadad"][i%4]:"#a9a3c0",i>=lit,{still:i>=lit,tag:i===0});if(i<lit&&i%3===0)heart(x,y-80-((T*30+i*7)%30),16,"#ff8fb1")}
+    if(meter>=1){bubble(190,G-6,"It's me. Holding back my tears.");}
+    g.fillStyle="#fff8";rr(250,12,300,14,7);g.fill();g.fillStyle="#ff8fb1";rr(250,12,Math.max(14,300*meter),14,7);g.fill();
+    $("hl").textContent="Chapter 3 · The Speech";$("hr").textContent="♥ "+lit+" / 24";
+  }else if(S.mode==="letter"||S.mode==="end"){
+    bg(LV[0],T*20);for(let i=0;i<8;i++)heart((i*113+T*20)%W,H-((T*30+i*50)%H),20,"#ff8fb166");
+    $("hl").textContent="";$("hr").textContent="";
+  }else{
+    const L=LV[S.lv];bg(L,cam);g.save();g.translate(-cam,0);
+    // door
+    const open=S.cheered>=L.need;g.fillStyle="#fff";rr(L.door-38,G-122,76,122,30);g.fill();g.fillStyle=open?"#ffd166":"#c9b6d8";rr(L.door-30,G-112,60,112,24);g.fill();if(open){g.fillStyle="#fff9";g.beginPath();g.arc(L.door,G-60,30+Math.sin(T*4)*4,0,7);g.fill()}g.fillStyle="#fff";g.beginPath();g.arc(L.door+16,G-50,3,0,7);g.fill();heart(L.door,G-130,22,open?"#ff6f91":"#b8a9c9");
+    for(const n of NP){person(n.x,G,n.on?n.c:"#a9b0c4",!n.on,{tag:n.sp,jump:n.on});if(!n.on)cloud(n.x,G-95);else if(Math.random()<.04)burst(n.x,G-70,"#ff6f91",1);if(n.sp&&!n.on){g.fillStyle="#f5b942";g.font="bold 20px sans-serif";g.textAlign="center";g.fillText("?",n.x,G-125)}}
+    if(L.ev&&S.mode!=="shout"&&!S.evDone){}
+    person(A.x,G,"#ff9ebb",false,{hair:1,star:1,still:!A.mv,walking:1});
+    for(const n of NP)if(!n.on&&Math.abs(n.x-A.x)<90&&S.mode==="walk"){heart(A.x,G-100,22,"#ff6f91")}
+    g.restore();
+    if(S.mode==="shout"){g.fillStyle="rgba(255,255,255,.3)";g.fillRect(0,0,W,H);person(660,G,"#7cc4ff",false,{jump:1});bubble(660,G-90-(Math.sin(T*14)*4),"يا شباب!");g.fillStyle="#4a2c4a";g.font="bold 16px sans-serif";g.fillText(shout+"/3",660,G+30)}
+    $("hl").textContent=L.n;$("hr").textContent="♥ "+S.cheered+" / "+NP.length;
+  }
+  g.textAlign="center";
+  for(const p of P||[]){g.globalAlpha=Math.max(0,p.l);heart(p.x-(S.mode==="walk"?cam:0),p.y,14,p.c)}g.globalAlpha=1;
+}
+let last=0;
+function frame(t){const dt=Math.min(.033,(t-last)/1000);last=t;T=t/1000;update(dt);draw();requestAnimationFrame(frame)}
+
+/* ===== INIT ===== */
+function title(){
+  const sv=loadP();
+  show(`<h1>The People<br>You Left Lighter</h1><p>A little game, made for Amani.<br>Happy birthday.</p><button class="b" data-go>Play</button>${sv&&sv.lv>0?'<button class="b" id="cn" style="background:#b9a4ff;box-shadow:0 5px 0 #7d68c9">Continue</button>':""}`,()=>intro(0));
+  const c=$("cn");if(c)c.onclick=()=>{ui.classList.remove("on");intro(Math.min(sv.lv,1))};
+}
+P=[];title();requestAnimationFrame(frame);
+</script>
+</body>
+</html>
